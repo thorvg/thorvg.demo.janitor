@@ -24,14 +24,15 @@ You pilot a Thor Cleaning Ship, sweeping the orbit clean by blasting away these 
 </p>
 
 ## Build & Run
-This program is built on the ThorVG engine. Please refer to the [ThorVG repo](https://github.com/thorvg/thorvg) to install it first. The recommended build option is
+Install Meson, Ninja, pkg-config, and a C++17 compiler, then install [ThorVG](https://github.com/thorvg/thorvg) and [ThorVG Toolkit](https://github.com/thorvg/thorvg.toolkit). The recommended ThorVG build option is
 ```
 -Dloaders="svg,ttf,jpg"
 ```
-Afer that, try build and execute the ThorVG Janitor!
+Ensure `thorvg-toolkit` and `thorvg-1` are discoverable by pkg-config. Build and run from the repository root so relative asset paths resolve correctly:
 ```
-$ make
-$ tvggame
+$ meson setup build
+$ ninja -C build
+$ ./build/thorvg-janitor
 ```
 
 ## Key Instruction
