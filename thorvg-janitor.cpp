@@ -947,7 +947,7 @@ struct ThorJanitor : tvg::toolkit::App
         bool forward = false;
     } keys;
 
-    ThorJanitor(const Size& size) : App("Thor Janitor", size) {}
+    ThorJanitor(const string& title, const Size& size) : App(title, size) {}
 
     ~ThorJanitor()
     {
@@ -1297,9 +1297,36 @@ struct ThorJanitor : tvg::toolkit::App
     }
 };
 
+RenderEngine options(int argc, char **argv, string& title)
+{
+    // -e <engine>
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (strcmp(argv[i], "-e") == 0) {
+            if (strcmp(argv[i + 1], "sw") == 0) {
+                title = "ThorVG Janitor (CPU)";
+                return RenderEngine::CPU;
+            }
+            if (strcmp(argv[i + 1], "gl") == 0) {
+                title = "ThorVG Janitor (OpenGL)";
+                return RenderEngine::GL;
+            }
+            if (strcmp(argv[i + 1], "wg") == 0) {
+                title = "ThorVG Janitor (WebGPU)";
+                return RenderEngine::WEBGPU;
+            }
+            break;
+        }
+    }
+    title = "ThorVG Janitor (CPU)";
+    return RenderEngine::CPU;
+}
+
 int main(int argc, char** argv)
 {
+    string title;
+    auto engine = options(argc, argv, title);
+
     tvg::Initializer::init(4);
-    tvg::toolkit::run(new ThorJanitor({uint32_t(WIDTH * SCALE), uint32_t(HEIGHT * SCALE)}));
+    tvg::toolkit::run(new ThorJanitor(title, {uint32_t(WIDTH * SCALE), uint32_t(HEIGHT * SCALE)}), engine);
     tvg::Initializer::term();
 }

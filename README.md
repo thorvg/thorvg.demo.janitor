@@ -35,6 +35,14 @@ $ ninja -C build
 $ ./build/thorvg-janitor
 ```
 
+Select the rendering backend with `-e <engine>`. The default is `sw` (CPU software rendering):
+```sh
+$ ./build/thorvg-janitor -e sw  # CPU (Software)
+$ ./build/thorvg-janitor -e gl  # OpenGL
+$ ./build/thorvg-janitor -e wg  # WebGPU
+```
+GPU backends require the corresponding support in your ThorVG and ThorVG Toolkit builds.
+
 ## Key Instruction
 
 * **Arrow Key**: Movement
