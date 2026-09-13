@@ -19,8 +19,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include "template.h"
+#include <list>
+#include <cmath>
+#include <cstring>
+#include <thorvg_toolkit.h>
 #include "assets.h"
+
+using namespace std;
+using namespace tvg;
+using namespace tvg::toolkit;
 
 /************************************************************************/
 /* Math Utility                                                         */
@@ -79,8 +86,7 @@ static inline T lerp(const T &start, const T &end, float t)
 #define WIDTH 3840              //base resolution
 #define HEIGHT 2160             //base resolution
 
-static float SCALE;             //scale factor
-static size_t SWIDTH, SHEIGHT;  //scaled resolution
+static float SCALE = 0.5333333333333f;  //scale factor
 static size_t LEVEL = 4;        //game level (0 ~ 9)
 
 struct Tween {
@@ -206,10 +212,10 @@ struct WarZone
         canvas->add(model);
     }
 
-    void shift(const Point& player)
+    void shift(const Point& player, const App::Size& size)
     {
-        auto x = player.x - SWIDTH/2;
-        auto y = player.y - SHEIGHT/2;
+        auto x = player.x - size.w/2;
+        auto y = player.y - size.h/2;
 
         for (int i = 0; i < GALAXY_LAYER; ++i) {
             galaxy[i]->translate(-x * _S((i+1) * 0.2), -y * _S((i+1) * 0.2));
@@ -360,7 +366,7 @@ struct Player
         this->pos = pos;
     }
 
-    void forward(WarZone& zone, float multiplier)
+    void forward(WarZone& zone, const App::Size& size, float multiplier)
     {
         auto radian = dir / 180.0f * M_PI;
         Point move = {_S(sinf(radian)), _S(cosf(radian))};
@@ -382,7 +388,7 @@ struct Player
             pos.y = _S(HEIGHT - shift.y) - bound;
         }
 
-        zone.shift(pos);
+        zone.shift(pos, size);
     }
 
     void left(float multiplier)
@@ -402,6 +408,7 @@ struct Player
         normalize(direction);
 
         launcher.update(pos, direction, dir, elapsed, shift, shoot);
+
         model->add(SceneEffect::Clear);
         model->add(SceneEffect::DropShadow, 200, 200, 255, 255, dir + 180.0f, _S(20.0f), _S(30), 30);
         model->rotate(dir);
@@ -446,16 +453,16 @@ struct Enemy
         model->unref();
     }
 
-    void init(Scene* elayer, const Point shift, uint32_t elapsed)
+    void init(Scene* elayer, const App::Size& size, const Point shift, uint32_t elapsed)
     {
         if (type == 0 || type == 4) {         //top -> bottom
-            pos = {{float(rand() % SWIDTH), -BOUND * 2}, {float(rand() % SWIDTH), SHEIGHT + BOUND * 2}};
+            pos = {{float(rand() % size.w), -BOUND * 2}, {float(rand() % size.w), size.h + BOUND * 2}};
         } else if (type == 1) {               //right -> left
-            pos = {{float(SWIDTH + BOUND), float(rand() % SHEIGHT)}, {-BOUND, float(rand() % SHEIGHT)}};
+            pos = {{float(size.w + BOUND), float(rand() % size.h)}, {-BOUND, float(rand() % size.h)}};
         } else if (type == 2) {               //bottom -> top
-            pos = {{float(rand() % SWIDTH), SHEIGHT + BOUND * 2}, {float(rand() % SWIDTH), -BOUND * 2}};
+            pos = {{float(rand() % size.w), size.h + BOUND * 2}, {float(rand() % size.w), -BOUND * 2}};
         } else if (type == 3) {               //left -> right
-            pos = {{-BOUND, float(rand() % SHEIGHT)}, {float(SWIDTH + BOUND), float(rand() % SHEIGHT)}};
+            pos = {{-BOUND, float(rand() % size.h)}, {float(size.w + BOUND), float(rand() % size.h)}};
         }
 
         time = {elapsed, float(BASETIME + (rand() % DURATION))};
@@ -500,13 +507,13 @@ struct Boxer : Enemy
 {
     static int type;
 
-    Boxer(Scene* elayer, const Point& bound, uint32_t elapsed) : Enemy(Boxer::type)
+    Boxer(Scene* elayer, const App::Size& size, const Point& bound, uint32_t elapsed) : Enemy(Boxer::type)
     {
         model->appendRect(-40, -40, 80, 80);
         model->fill(50, 0, 0);
         model->strokeFill(255, 50, 50);
 
-        init(elayer, bound, elapsed);
+        init(elayer, size, bound, elapsed);
     }
 
     Color color() override { return {255, 50, 50}; }
@@ -516,7 +523,7 @@ struct Tripod : Enemy
 {
     static int type;
 
-    Tripod(Scene* elayer, const Point& bound, uint32_t elapsed) : Enemy(Tripod::type)
+    Tripod(Scene* elayer, const App::Size& size, const Point& bound, uint32_t elapsed) : Enemy(Tripod::type)
     {
         model->moveTo(0, -40);
         model->lineTo(40, 40);
@@ -525,7 +532,7 @@ struct Tripod : Enemy
         model->strokeFill(170, 255, 170);
         model->fill(0, 50, 0);
 
-        init(elayer, bound, elapsed);
+        init(elayer, size, bound, elapsed);
     }
 
     Color color() override { return {170, 255, 170}; }
@@ -535,7 +542,7 @@ struct Sander : Enemy
 {
     static int type;
 
-    Sander(Scene* elayer, const Point& bound, uint32_t elapsed) : Enemy(Sander::type)
+    Sander(Scene* elayer, const App::Size& size, const Point& bound, uint32_t elapsed) : Enemy(Sander::type)
     {
         static const PathCommand cmds[] = {
             PathCommand::MoveTo,
@@ -553,7 +560,7 @@ struct Sander : Enemy
         model->strokeFill(255, 120, 255);
         model->fill(50, 35, 50);
 
-        init(elayer, bound, elapsed);
+        init(elayer, size, bound, elapsed);
     }
 
     Color color() override { return {255, 120, 255}; }
@@ -563,7 +570,7 @@ struct Hexen : Enemy
 {
     static int type;
 
-    Hexen(Scene* elayer, const Point& bound, uint32_t elapsed) : Enemy(Hexen::type)
+    Hexen(Scene* elayer, const App::Size& size, const Point& bound, uint32_t elapsed) : Enemy(Hexen::type)
     {        
         static const PathCommand cmds[] = {
             PathCommand::MoveTo,
@@ -581,7 +588,7 @@ struct Hexen : Enemy
         model->strokeFill(0, 255, 255);
         model->fill(0, 50, 50);
 
-        init(elayer, bound, elapsed);
+        init(elayer, size, bound, elapsed);
     }
 
     Color color() override { return {0, 255, 255}; }
@@ -762,12 +769,12 @@ struct GarbageCollector
     }
 
     template<class T>
-    T* get(const Point& bound, uint32_t elapsed)
+    T* get(const Point& bound, const App::Size& size, uint32_t elapsed)
     {
-        if (enemies[T::type].empty()) return new T(elayer, bound, elapsed);
+        if (enemies[T::type].empty()) return new T(elayer, size, bound, elapsed);
         auto ret = enemies[T::type].back();
         enemies[T::type].pop_back();
-        ret->init(elayer, bound, elapsed);
+        ret->init(elayer, size, bound, elapsed);
         return static_cast<T*>(ret);
     }
 
@@ -894,7 +901,7 @@ struct ComboMgr
     }
 };
 
-struct ThorJanitor : tvgdemo::Demo
+struct ThorJanitor : tvg::toolkit::App
 {
     #define LIFE_CNT 3
     #define RESPAWN_LEVEL 100
@@ -933,6 +940,15 @@ struct ThorJanitor : tvgdemo::Demo
     bool updatedWipes = true;
     bool initialized = false;
 
+    struct {
+        bool shoot = false;
+        bool right = false;
+        bool left = false;
+        bool forward = false;
+    } keys;
+
+    ThorJanitor(const Size& size) : App("Thor Janitor", size) {}
+
     ~ThorJanitor()
     {
         if (!initialized) return;
@@ -950,7 +966,7 @@ struct ThorJanitor : tvgdemo::Demo
         }
     }
 
-    bool content(Canvas* canvas, uint32_t w, uint32_t h) override
+    bool content(Canvas* canvas, const Size& size) override
     {
         Enemy::BOUND = _S(80.0f);
 
@@ -960,7 +976,7 @@ struct ThorJanitor : tvgdemo::Demo
         clipper->appendRect(zone.min.x, zone.min.y, zone.w() + 10, zone.h() + 10);
         clipper->scale(SCALE);
 
-        player.init(canvas, {float(w) * 0.5f, float(h) * 0.5f}, (Shape*)clipper->duplicate());
+        player.init(canvas, {float(size.w) * 0.5f, float(size.h) * 0.5f}, (Shape*)clipper->duplicate());
 
         gc.elayer = elayer = Scene::gen();
         elayer->clip(clipper);
@@ -971,26 +987,26 @@ struct ThorJanitor : tvgdemo::Demo
         //lives
         lives.flash = Shape::gen();
         lives.flash->ref();
-        lives.flash->appendRect(0, 0, SWIDTH, SHEIGHT);
+        lives.flash->appendRect(0, 0, size.w, size.h);
         lives.flash->fill(255, 255, 170);
         lives.flash->opacity(0);
 
         //life icon
-        Point size = {_S(150), _S(150)};
+        Point iconSize = {_S(150), _S(150)};
         lives.icon[0] = Scene::gen();
         lives.icon[0]->ref();
         lives.icon[0]->add(SceneEffect::DropShadow, 170, 255, 80, 255, 0.0f, 0.0f, _S(15), 30);
         auto pic = Picture::gen();
         pic->load(LIFE_ICON, strlen(LIFE_ICON), "svg");
-        pic->size(size.x, size.y);
-        lives.icon[0]->translate(0, SHEIGHT - size.y);
+        pic->size(iconSize.x, iconSize.y);
+        lives.icon[0]->translate(0, size.h - iconSize.y);
         lives.icon[0]->add(pic);
         canvas->add(lives.icon[0]);
 
         for (int i = 1; i < LIFE_CNT; ++i) {
             lives.icon[i] = static_cast<Scene*>(lives.icon[0]->duplicate());
             lives.icon[i]->ref();
-            lives.icon[i]->translate(size.x * i, SHEIGHT - size.y);            
+            lives.icon[i]->translate(iconSize.x * i, size.h - iconSize.y);
             canvas->add(lives.icon[i]);
         }
 
@@ -1013,7 +1029,7 @@ struct ThorJanitor : tvgdemo::Demo
         gui.wipes->size(50);
         gui.wipes->text("0 Wipes");
         gui.wipes->fill(170, 255, 80);
-        gui.wipes->translate(SWIDTH/2, 10);
+        gui.wipes->translate(size.w/2, 10);
         gui.wipes->align(0.5f, 0.0f);
         gui.wipes->scale(SCALE);
         wrapper->add(gui.wipes);
@@ -1024,7 +1040,7 @@ struct ThorJanitor : tvgdemo::Demo
         gui.lv->font(FONT_NAME);
         gui.lv->size(40);
         gui.lv->fill(170, 255, 80);
-        gui.lv->translate(SWIDTH -_S(20), _S(20));
+        gui.lv->translate(size.w -_S(20), _S(20));
         gui.lv->align(1.0f, 0.0f);
         gui.lv->scale(SCALE);
         char buf[30];
@@ -1050,7 +1066,7 @@ struct ThorJanitor : tvgdemo::Demo
         // update fps after a certan elapsed time, 
         // otherwise it's difficult to read if text is changed every frame.
         if (updateFPS) {
-            snprintf(buf, sizeof(buf), "FPS: %d", tvgdemo::Demo::fps);
+            snprintf(buf, sizeof(buf), "FPS: %d", fps());
             gui.fps->text(buf);
         }
     }
@@ -1071,18 +1087,42 @@ struct ThorJanitor : tvgdemo::Demo
         elayer->add(exp->model);
     }
 
+    void keyState(tvg::toolkit::Key key, bool pressed)
+    {
+        using tvg::toolkit::Key;
+        if (key == static_cast<Key>('a')) {
+            keys.shoot = pressed;
+            return;
+        }
+        switch (key) {
+            case Key::Right: keys.right = pressed; break;
+            case Key::Left: keys.left = pressed; break;
+            case Key::Up: keys.forward = pressed; break;
+            default: break;
+        }
+    }
+
+    bool keydown(Canvas* canvas, tvg::toolkit::Key key) override
+    {
+        if (key == tvg::toolkit::Key::Escape) quit();
+
+        keyState(key, true);
+        return false;
+    }
+
+    bool keyup(Canvas* canvas, tvg::toolkit::Key key) override
+    {
+        keyState(key, false);
+        return false;
+    }
+
     void input(Canvas* canvas, uint32_t elapsed)
     {
-        player.shoot = false;
-
-        const Uint8 *keystate = SDL_GetKeyboardState(NULL);
-        if (keystate) {
-            auto diff = elapsed - tick.last;
-            if (keystate[SDL_SCANCODE_A]) player.shoot = true;
-            if (keystate[SDL_SCANCODE_RIGHT]) player.right(diff);
-            if (keystate[SDL_SCANCODE_LEFT]) player.left(diff);
-            if (keystate[SDL_SCANCODE_UP]) player.forward(zone, diff);
-        }
+        player.shoot = keys.shoot;
+        auto diff = elapsed - tick.last;
+        if (keys.right) player.right(diff);
+        if (keys.left) player.left(diff);
+        if (keys.forward) player.forward(zone, size(), diff);
     }
 
     void gamelevel()
@@ -1136,8 +1176,8 @@ struct ThorJanitor : tvgdemo::Demo
             updatedWipes = true;
             respawnTime = 1000;
             Enemy::DURATION = 10000;
-            player.pos = {float(SWIDTH)/2, float(SHEIGHT)/2};
-            zone.shift(player.pos);
+            player.pos = {float(size().w)/2, float(size().h)/2};
+            zone.shift(player.pos, size());
 
             lives.count = LIFE_CNT;
             for (int i = 0; i < LIFE_CNT; i++) {
@@ -1155,7 +1195,7 @@ struct ThorJanitor : tvgdemo::Demo
         combo.type = -1;
     }
 
-    bool update(Canvas* canvas, uint32_t elapsed) override
+    bool update(Canvas* canvas, size_t elapsed) override
     {
         auto shift = origin - (player.pos - origin);
 
@@ -1248,10 +1288,10 @@ struct ThorJanitor : tvgdemo::Demo
         Point bound = {_S(800), _S(500)};
 
         //random enemy respawn
-        if (rand() % 2) enemies.push_back(gc.get<Boxer>(bound, elapsed));
-        if (rand() % 2) enemies.push_back(gc.get<Tripod>(bound, elapsed));
-        if (rand() % 2) enemies.push_back(gc.get<Sander>(bound, elapsed));
-        if (rand() % 2) enemies.push_back(gc.get<Hexen>(bound, elapsed));
+        if (rand() % 2) enemies.push_back(gc.get<Boxer>(bound, size(), elapsed));
+        if (rand() % 2) enemies.push_back(gc.get<Tripod>(bound, size(), elapsed));
+        if (rand() % 2) enemies.push_back(gc.get<Sander>(bound, size(), elapsed));
+        if (rand() % 2) enemies.push_back(gc.get<Hexen>(bound, size(), elapsed));
 
         return true;
     }
@@ -1259,9 +1299,7 @@ struct ThorJanitor : tvgdemo::Demo
 
 int main(int argc, char** argv)
 {
-    SCALE = 0.5333333333333f;  //must be.
-    SWIDTH = WIDTH * SCALE;
-    SHEIGHT = HEIGHT * SCALE;
-
-    return tvgdemo::main(new ThorJanitor, argc, argv, false, SWIDTH, SHEIGHT, 4);
+    tvg::Initializer::init(4);
+    tvg::toolkit::run(new ThorJanitor({uint32_t(WIDTH * SCALE), uint32_t(HEIGHT * SCALE)}));
+    tvg::Initializer::term();
 }
