@@ -33,6 +33,8 @@ using namespace tvg::toolkit;
 /* Math Utility                                                         */
 /************************************************************************/
 
+static constexpr float PI = 3.14159265358979323846f;
+
 static inline Point operator-(const Point& lhs, const Point& rhs)
 {
     return {lhs.x - rhs.x, lhs.y - rhs.y};
@@ -368,7 +370,7 @@ struct Player
 
     void forward(WarZone& zone, const App::Size& size, float multiplier)
     {
-        auto radian = dir / 180.0f * M_PI;
+        auto radian = dir / 180.0f * PI;
         Point move = {_S(sinf(radian)), _S(cosf(radian))};
         normalize(move);
         extend(move, _S(multiplier * 0.4f));
@@ -403,7 +405,7 @@ struct Player
 
     void update(uint32_t elapsed, const Point& shift)
     {
-        auto radian = dir / 180.0f * M_PI;
+        auto radian = dir / 180.0f * PI;
         direction = {_S(sinf(radian)), -_S(cosf(radian))};
         normalize(direction);
 
@@ -659,7 +661,7 @@ struct Explosion
             auto dir = rand() % 360;
             flashes[i].shape->rotate(dir);
             auto to = length * 25.0f;
-            auto rad = dir / 180.0f * M_PI;
+            auto rad = dir / 180.0f * PI;
             flashes[i].to.x = -to * sin(rad) + pos.x;
             flashes[i].to.y = +to * cos(rad) + pos.y;
         }
@@ -672,7 +674,7 @@ struct Explosion
             auto dir = rand() % 360;
             flashes[i].shape->rotate(dir);
             auto to = length * 30.0f;
-            auto rad = dir / 180.0f * M_PI;
+            auto rad = dir / 180.0f * PI;
             flashes[i].to.x = -to * sin(rad) + pos.x;
             flashes[i].to.y = +to * cos(rad) + pos.y;
         }
@@ -1044,7 +1046,7 @@ struct ThorJanitor : tvg::toolkit::App
         gui.lv->align(1.0f, 0.0f);
         gui.lv->scale(SCALE);
         char buf[30];
-        snprintf(buf, sizeof(buf), "Level %ld", LEVEL + 1);
+        snprintf(buf, sizeof(buf), "Level %zu", LEVEL + 1);
         gui.lv->text(buf);
         canvas->add(gui.lv);
 
@@ -1059,7 +1061,7 @@ struct ThorJanitor : tvg::toolkit::App
 
         //update wipes count
         if (updatedWipes) {
-            snprintf(buf, sizeof(buf), "%ld Wipes", wipesCnt);
+            snprintf(buf, sizeof(buf), "%zu Wipes", wipesCnt);
             gui.wipes->text(buf);
             updatedWipes = false;
         }
@@ -1129,7 +1131,7 @@ struct ThorJanitor : tvg::toolkit::App
     {
         if (LEVEL < 9 && wipesCnt / 100 > LEVEL) {
             char buf[30];
-            snprintf(buf, sizeof(buf), "Level %ld", ++LEVEL + 1);
+            snprintf(buf, sizeof(buf), "Level %zu", ++LEVEL + 1);
             gui.lv->text(buf);
             respawnTime -= RESPAWN_LEVEL;
             Enemy::DURATION -= ENEMY_DURATION_LEVEL;
@@ -1169,7 +1171,7 @@ struct ThorJanitor : tvg::toolkit::App
 
         //all life exhausted. total reset
         if (lives.count == 0) {
-            fprintf(stdout, "Good Job!, Your Wipes: %ld\n", wipesCnt);
+            fprintf(stdout, "Good Job!, Your Wipes: %zu\n", wipesCnt);
 
             LEVEL = 0;
             wipesCnt = 0;
@@ -1185,7 +1187,7 @@ struct ThorJanitor : tvg::toolkit::App
             }
 
             char buf[30];
-            snprintf(buf, sizeof(buf), "Level %ld", LEVEL + 1);
+            snprintf(buf, sizeof(buf), "Level %zu", LEVEL + 1);
             gui.lv->text(buf);
         }
 
