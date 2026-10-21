@@ -1329,6 +1329,6 @@ int main(int argc, char** argv)
     auto engine = options(argc, argv, title);
 
     tvg::Initializer::init(4);
-    tvg::toolkit::run(new ThorJanitor(title, {uint32_t(WIDTH * SCALE), uint32_t(HEIGHT * SCALE)}), engine);
+    tvg::toolkit::run(new ThorJanitor(title, {uint32_t(WIDTH * SCALE), uint32_t(HEIGHT * SCALE)}), engine, tvg::EngineOption::None);
     tvg::Initializer::term();
 }
